@@ -1,0 +1,483 @@
+#ifndef __RED_BLACK_TREE__
+#define __RED_BLACK_TREE__
+#include <iostream>
+
+using namespace std;
+
+template<class T>
+class Node
+{
+    public:
+        enum Color {Red, Black};
+    private:
+        T value;
+        Node<T> *parent = nullptr;
+        Node<T> *left = nullptr, *right = nullptr;
+        Color color = Red;
+        bool isRoot = false;
+    public:
+        Node() {;}
+        Node(T val, Color clr = Red) : value(val), color(clr) {;}
+        T& getValue() {return this->value;}
+        void setValue(T val) {this->value = val;}
+        Node<T>* getParent() {return (this->parent);}
+        void setParent(Node<T> *p) {this->parent = p;}
+        Node<T>* getLeft() {return (this->left);}
+        Node<T>* getRight() {return (this->right);}
+        void setLeft(Node<T> *l) {this->left = l;}
+        void setRight(Node<T> *r) {this->right = r;}
+        Color getColor() {return this->color;}
+        void setColor(Color c) {this->color = c;}
+        bool getIsRoot() {return this->isRoot;}
+        void setIsRoot(bool x) {this->isRoot = x;}
+};
+
+template<class T>
+class RedBlackTree
+{
+    public:
+        enum Traversal {Inorder, Preorder, Postorder};
+    private:
+        Node<T> *root = nullptr;
+    public:
+        long nNodes = 0;
+        RedBlackTree() {;}
+        RedBlackTree(Node<T>* r) {this->root = r;r->setIsRoot(true);r->setColor(Node<T>::Black);}
+        RedBlackTree(T val) : root(val) {root->setIsRoot(true); root->setColor(Node<T>::Black); (this->nNodes)++;}
+        ~RedBlackTree() {this->clear();}
+        Node<T>* getRoot() {return (this->root);}
+        void setRoot(Node<T>* r) {this->root = r;}
+        void leftRotate(Node<T>* parent, Node<T>* child)
+        {
+            if(parent->getRight() == child)
+            {
+                Node<T>* childLeft = child->getLeft();
+                parent->setRight(childLeft);
+                if(childLeft != nullptr) childLeft->setParent(parent);
+                child->setLeft(parent);
+                child->setParent(parent->getParent());
+                if(parent->getParent() != nullptr)
+                {
+                    if(parent->getParent()->getLeft() == parent) parent->getParent()->setLeft(child);
+                    else if(parent->getParent()->getRight() == parent) parent->getParent()->setRight(child);
+                }
+                parent->setParent(child);
+                bool isParentRoot = parent->getIsRoot();
+                parent->setIsRoot(child->getIsRoot());
+                child->setIsRoot(isParentRoot);
+                if(child->getIsRoot()) this->root = child;
+            }
+        }
+        void rightRotate(Node<T>* parent, Node<T>* child)
+        {
+            if(parent->getLeft() == child)
+            {
+                Node<T>* childRight = child->getRight();
+                parent->setLeft(childRight);
+                if(childRight != nullptr) childRight->setParent(parent);
+                child->setRight(parent);
+                child->setParent(parent->getParent());
+                if(parent->getParent() != nullptr)
+                {
+                    if(parent->getParent()->getLeft() == parent) parent->getParent()->setLeft(child);
+                    else if(parent->getParent()->getRight() == parent) parent->getParent()->setRight(child);
+                }
+                parent->setParent(child);
+                bool isParentRoot = parent->getIsRoot();
+                parent->setIsRoot(child->getIsRoot());
+                child->setIsRoot(isParentRoot);
+                if(child->getIsRoot()) this->root = child;
+            }
+        }
+        void insertNode(T val)
+        {
+            Node<T> *a = new Node<T>(val), *temp = this->root, *parent;
+            if(this->root != nullptr)
+            {
+                while(temp != nullptr)
+                {
+                    parent = temp;
+                    (temp->getValue() > val)?(temp = temp->getLeft()):(temp = temp->getRight());
+                }
+                a->setParent(parent);
+                (parent->getValue() > val)?(parent->setLeft(a)):(parent->setRight(a));
+                (this->nNodes)++;
+            }
+            else
+            {
+                this->root = a;
+                root->setIsRoot(true);
+                root->setColor(Node<T>::Black);
+                (this->nNodes)++;
+            }
+            this->insertNodeFix(a);
+        }
+        void insertNodeFix(Node<T>* a)
+        {
+            if(a != nullptr)
+            {
+                Node<T>* parent = a->getParent();
+                if(parent != nullptr && parent->getParent() != nullptr && parent->getColor() == Node<T>::Red)
+                {
+                    if(parent->getParent()->getLeft() == parent)
+                    {
+                        Node<T>* uncleNode = parent->getParent()->getRight();
+                        if(uncleNode != nullptr)
+                        {
+                            if(uncleNode->getColor() == Node<T>::Red)
+                            {
+                                parent->setColor(Node<T>::Black);
+                                uncleNode->setColor(Node<T>::Black);
+                                if(!(parent->getParent()->getIsRoot())) parent->getParent()->setColor(Node<T>::Red);
+                                this->insertNodeFix(parent->getParent());
+                            }
+                            else
+                            {
+                                if(parent->getRight() == a)
+                                {
+                                    leftRotate(parent, a);
+                                    a->setColor(Node<T>::Black);
+                                    a->getParent()->setColor(Node<T>::Red);
+                                    rightRotate(a->getParent(), a);
+                                }
+                                else
+                                {
+                                    parent->setColor(Node<T>::Black);
+                                    parent->getParent()->setColor(Node<T>::Red);
+                                    rightRotate(parent->getParent(), parent);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if(parent->getRight() == a)
+                            {
+                                leftRotate(parent, a);
+                                a->setColor(Node<T>::Black);
+                                a->getParent()->setColor(Node<T>::Red);
+                                rightRotate(a->getParent(), a);
+                            }
+                            else
+                            {
+                                parent->setColor(Node<T>::Black);
+                                parent->getParent()->setColor(Node<T>::Red);
+                                rightRotate(parent->getParent(), parent);
+                            }
+                        }
+                    }
+                    else if(parent->getParent()->getRight() == parent)
+                    {
+                        Node<T>* uncleNode = parent->getParent()->getLeft();
+                        if(uncleNode != nullptr)
+                        {
+                            if(uncleNode->getColor() == Node<T>::Red)
+                            {
+                                parent->setColor(Node<T>::Black);
+                                uncleNode->setColor(Node<T>::Black);
+                                if(!(parent->getParent()->getIsRoot())) parent->getParent()->setColor(Node<T>::Red);
+                                this->insertNodeFix(parent->getParent());
+                            }
+                            else
+                            {
+                                if(parent->getLeft() == a)
+                                {
+                                    rightRotate(parent, a);
+                                    a->setColor(Node<T>::Black);
+                                    a->getParent()->setColor(Node<T>::Red);
+                                    leftRotate(a->getParent(), a);
+                                }
+                                else
+                                {
+                                    parent->setColor(Node<T>::Black);
+                                    parent->getParent()->setColor(Node<T>::Red);
+                                    leftRotate(parent->getParent(), parent);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if(parent->getLeft() == a)
+                            {
+                                rightRotate(parent, a);
+                                a->setColor(Node<T>::Black);
+                                a->getParent()->setColor(Node<T>::Red);
+                                leftRotate(a->getParent(), a);
+                            }
+                            else
+                            {
+                                parent->setColor(Node<T>::Black);
+                                parent->getParent()->setColor(Node<T>::Red);
+                                leftRotate(parent->getParent(), parent);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        void deleteNode(T val, Node<T>* start = nullptr)
+        {
+            Node<T>* temp = (start != nullptr)?(start):(this->root), *parent, *successor, *psuccessor;
+            while(temp != nullptr && temp->getValue() != val)
+            {
+                parent = temp;
+                (temp->getValue() > val)?(temp = temp->getLeft()):(temp = temp->getRight());
+            }
+            if(temp != nullptr)
+            {
+                if(temp->getLeft() == nullptr && temp->getRight() == nullptr) this->deleteNodeFix(temp);
+                else if(temp->getLeft() == nullptr && temp->getRight() != nullptr)
+                {
+                    successor = temp->getRight();
+                    psuccessor = temp;
+                    while(successor->getLeft() != nullptr)
+                    {
+                        psuccessor = successor;
+                        successor = successor->getLeft();
+                    }
+                    temp->setValue(successor->getValue());
+                    this->deleteNode(successor->getValue(), successor);
+                }
+                else if(temp->getLeft() != nullptr && temp->getRight() == nullptr)
+                {
+                    successor = temp->getLeft();
+                    psuccessor = temp;
+                    while(successor->getRight() != nullptr)
+                    {
+                        psuccessor = successor;
+                        successor = successor->getRight();
+                    }
+                    temp->setValue(successor->getValue());
+                    this->deleteNode(successor->getValue(), successor);
+                }
+                else
+                {
+                    successor = temp->getRight();
+                    psuccessor = temp;
+                    while(successor->getLeft() != nullptr)
+                    {
+                        psuccessor = successor;
+                        successor = successor->getLeft();
+                    }
+                    temp->setValue(successor->getValue());
+                    this->deleteNode(successor->getValue(), successor);
+                }
+            }
+        }
+        void deleteNodeFix(Node<T>* dNode, bool deletion = true)
+        {
+            if(dNode != nullptr)
+            {
+                if(dNode->getColor() == Node<T>::Red)
+                {
+                    //Case 1
+                    (dNode->getParent() != nullptr && dNode->getParent()->getLeft() == dNode)?(dNode->getParent()->setLeft(nullptr)):(dNode->getParent()->setRight(nullptr));
+                    delete dNode;
+                }
+                else if(dNode->getParent() != nullptr)
+                {
+                    if(dNode->getParent()->getLeft() == dNode)
+                    {
+                        if(dNode->getParent()->getRight() != nullptr && dNode->getParent()->getRight()->getColor() == Node<T>::Black)
+                        {
+                            if((dNode->getParent()->getRight()->getLeft() == nullptr || dNode->getParent()->getRight()->getLeft()->getColor() == Node<T>::Black) && (dNode->getParent()->getRight()->getRight() == nullptr || dNode->getParent()->getRight()->getRight()->getColor() == Node<T>::Black))
+                            {
+                                //Case 3
+                                if(dNode->getParent()->getColor() == Node<T>::Red) dNode->getParent()->setColor(Node<T>::Black);
+                                else this->deleteNodeFix(dNode->getParent(), false);
+                                dNode->getParent()->getRight()->setColor(Node<T>::Red);
+                                if(deletion)
+                                {
+                                    dNode->getParent()->setLeft(nullptr);
+                                    delete dNode;
+                                }
+                            }
+                            else if((dNode->getParent()->getRight()->getLeft() != nullptr && dNode->getParent()->getRight()->getLeft()->getColor() == Node<T>::Red) && (dNode->getParent()->getRight()->getRight() == nullptr || dNode->getParent()->getRight()->getRight()->getColor() == Node<T>::Black))
+                            {
+                                //Case 5
+                                Node<int>::Color tempColor = dNode->getParent()->getRight()->getColor();
+                                dNode->getParent()->getRight()->setColor(dNode->getParent()->getRight()->getLeft()->getColor());
+                                dNode->getParent()->getRight()->getLeft()->setColor(tempColor);
+                                rightRotate(dNode->getParent()->getRight(), dNode->getParent()->getRight()->getLeft());
+                                this->deleteNodeFix(dNode, deletion);
+                            }
+                            else if(dNode->getParent()->getRight()->getRight() != nullptr && dNode->getParent()->getRight()->getRight()->getColor() == Node<T>::Red)
+                            {
+                                //Case 6
+                                Node<int>::Color tempColor = dNode->getParent()->getColor();
+                                dNode->getParent()->setColor(dNode->getParent()->getRight()->getColor());
+                                dNode->getParent()->getRight()->setColor(tempColor);
+                                dNode->getParent()->getRight()->getRight()->setColor(Node<T>::Black);
+                                leftRotate(dNode->getParent(), dNode->getParent()->getRight());
+                                if(deletion)
+                                {
+                                    dNode->getParent()->setLeft(nullptr);
+                                    delete dNode;
+                                }
+                            }
+                        }
+                        else if(dNode->getParent()->getRight() != nullptr && dNode->getParent()->getRight()->getColor() == Node<T>::Red)
+                        {
+                            //Case 4
+                            Node<int>::Color tempColor = dNode->getParent()->getColor();
+                            dNode->getParent()->setColor(dNode->getParent()->getRight()->getColor());
+                            dNode->getParent()->getRight()->setColor(tempColor);
+                            leftRotate(dNode->getParent(), dNode->getParent()->getRight());
+                            this->deleteNodeFix(dNode, deletion);
+                        }
+                        else
+                        {
+                            //Case 3
+                            if(dNode->getParent()->getColor() == Node<T>::Red) dNode->getParent()->setColor(Node<T>::Black);
+                            else this->deleteNodeFix(dNode->getParent(), false);
+                            if(deletion)
+                            {
+                                dNode->getParent()->setLeft(nullptr);
+                                delete dNode;
+                            }
+                        }
+                    }
+                    else if(dNode->getParent()->getRight() == dNode)
+                    {
+                        if(dNode->getParent()->getLeft() != nullptr && dNode->getParent()->getLeft()->getColor() == Node<T>::Black)
+                        {
+                            if((dNode->getParent()->getLeft()->getLeft() == nullptr || dNode->getParent()->getLeft()->getLeft()->getColor() == Node<T>::Black) && (dNode->getParent()->getLeft()->getRight() == nullptr || dNode->getParent()->getLeft()->getRight()->getColor() == Node<T>::Black))
+                            {
+                                // Case 3
+                                if(dNode->getParent()->getColor() == Node<T>::Red) dNode->getParent()->setColor(Node<T>::Black);
+                                else this->deleteNodeFix(dNode->getParent(), false);
+                                dNode->getParent()->getLeft()->setColor(Node<T>::Red);
+                                if(deletion)
+                                {
+                                    dNode->getParent()->setRight(nullptr);
+                                    delete dNode;
+                                }
+                            }
+                            else if((dNode->getParent()->getLeft()->getLeft() == nullptr || dNode->getParent()->getLeft()->getLeft()->getColor() == Node<T>::Black) && (dNode->getParent()->getLeft()->getRight() != nullptr && dNode->getParent()->getLeft()->getRight()->getColor() == Node<T>::Red))
+                            {
+                                //Case 5
+                                Node<int>::Color tempColor = dNode->getParent()->getLeft()->getColor();
+                                dNode->getParent()->getLeft()->setColor(dNode->getParent()->getLeft()->getRight()->getColor());
+                                dNode->getParent()->getLeft()->getRight()->setColor(tempColor);
+                                leftRotate(dNode->getParent()->getLeft(), dNode->getParent()->getLeft()->getRight());
+                                this->deleteNodeFix(dNode, deletion);
+                            }
+                            else if(dNode->getParent()->getLeft()->getLeft() != nullptr && dNode->getParent()->getLeft()->getLeft()->getColor() == Node<T>::Red)
+                            {
+                                //Case 6
+                                Node<int>::Color tempColor = dNode->getParent()->getColor();
+                                dNode->getParent()->setColor(dNode->getParent()->getLeft()->getColor());
+                                dNode->getParent()->getLeft()->setColor(tempColor);
+                                dNode->getParent()->getLeft()->getLeft()->setColor(Node<T>::Black);
+                                rightRotate(dNode->getParent(), dNode->getParent()->getLeft());
+                                if(deletion)
+                                {
+                                    dNode->getParent()->setRight(nullptr);
+                                    delete dNode;
+                                }
+                            }
+                        }
+                        else if(dNode->getParent()->getLeft() != nullptr && dNode->getParent()->getLeft()->getColor() == Node<T>::Red)
+                        {
+                            //Case 4
+                            Node<int>::Color tempColor = dNode->getParent()->getColor();
+                            dNode->getParent()->setColor(dNode->getParent()->getLeft()->getColor());
+                            dNode->getParent()->getLeft()->setColor(tempColor);
+                            rightRotate(dNode->getParent(), dNode->getParent()->getLeft());
+                            this->deleteNodeFix(dNode, deletion);
+                        }
+                        else
+                        {
+                            //Case 3
+                            if(dNode->getParent()->getColor() == Node<T>::Red) dNode->getParent()->setColor(Node<T>::Black);
+                            else this->deleteNodeFix(dNode->getParent(), false);
+                            if(deletion)
+                            {
+                                dNode->getParent()->setRight(nullptr);
+                                delete dNode;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    //Case 2
+                    if(deletion)
+                    {
+                        if(dNode == this->root) this->root = nullptr;
+                        delete dNode;
+                    }
+                }
+            }
+        }
+        void print(Traversal traversal = RedBlackTree<T>::Inorder, Node<T> *temp = nullptr)
+        {
+            if(temp != nullptr)
+            {
+                switch(traversal)
+                {
+                    case Inorder:
+                        if(temp->getLeft() != nullptr) print(traversal, temp->getLeft());
+                        (temp->getColor() == Node<T>::Red)?(cout << "\033[1;31m" << temp->getValue() << "\033[0m "):(cout << temp->getValue() << " ");
+                        if(temp->getRight() != nullptr) print(traversal, temp->getRight());
+                        break;
+                    case Preorder:
+                        (temp->getColor() == Node<T>::Red)?(cout << "\033[1;31m" << temp->getValue() << "\033[0m "):(cout << temp->getValue() << " ");
+                        if(temp->getLeft() != nullptr) print(traversal, temp->getLeft());
+                        if(temp->getRight() != nullptr) print(traversal, temp->getRight());
+                        break;
+                    case Postorder:
+                        if(temp->getLeft() != nullptr) print(traversal, temp->getLeft());
+                        if(temp->getRight() != nullptr) print(traversal, temp->getRight());
+                        (temp->getColor() == Node<T>::Red)?(cout << "\033[1;31m" << temp->getValue() << "\033[0m "):(cout << temp->getValue() << " ");
+                        break;
+                }
+            }
+            else
+            {
+                if(this->root != nullptr)
+                {
+                    temp = this->root;
+                    switch(traversal)
+                    {
+                        case Inorder:
+                            if(temp->getLeft() != nullptr) print(traversal, temp->getLeft());
+                            (temp->getColor() == Node<T>::Red)?(cout << "\033[1;31m" << temp->getValue() << "\033[0m "):(cout << temp->getValue() << " ");
+                            if(temp->getRight() != nullptr) print(traversal, temp->getRight());
+                            break;
+                        case Preorder:
+                            (temp->getColor() == Node<T>::Red)?(cout << "\033[1;31m" << temp->getValue() << "\033[0m "):(cout << temp->getValue() << " ");
+                            if(temp->getLeft() != nullptr) print(traversal, temp->getLeft());
+                            if(temp->getRight() != nullptr) print(traversal, temp->getRight());
+                            break;
+                        case Postorder:
+                            if(temp->getLeft() != nullptr) print(traversal, temp->getLeft());
+                            if(temp->getRight() != nullptr) print(traversal, temp->getRight());
+                            (temp->getColor() == Node<T>::Red)?(cout << "\033[1;31m" << temp->getValue() << "\033[0m "):(cout << temp->getValue() << " ");
+                            break;
+                    }
+                }
+                else cout << "Tree is empty";
+            }
+        }
+        void clear(Node<T> *temp = nullptr)
+        {
+            if(temp != nullptr)
+            {
+                if(temp->getLeft() != nullptr) clear(temp->getLeft());
+                if(temp->getRight() != nullptr) clear(temp->getRight());
+                delete temp;
+            }
+            else
+            {
+                if(this->root != nullptr)
+                {
+                    temp = this->root;
+                    if(temp->getLeft() != nullptr) clear(temp->getLeft());
+                    if(temp->getRight() != nullptr) clear(temp->getRight());
+                    if(temp == this->root) this->root = nullptr;
+                    delete temp;
+                }
+            }
+        }
+};
+#endif
